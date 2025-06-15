@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, Suspense, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 
 function CalendarEmbedder() {
@@ -9,7 +9,7 @@ function CalendarEmbedder() {
   const [embeddedUrl, setEmbeddedUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const validateAndSetUrl = (urlToValidate: string | null) => {
+  const validateAndSetUrl = useCallback((urlToValidate: string | null) => {
     setError(null);
     setEmbeddedUrl(null);
 
@@ -34,11 +34,12 @@ function CalendarEmbedder() {
       }
       setEmbeddedUrl(urlToValidate);
 
-    } catch (e: any) {
-      setError(e.message || 'Invalid URL format. Please check and try again.');
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : 'Invalid URL format. Please check and try again.';
+      setError(message);
       setEmbeddedUrl(null);
-    }
-  };
+   }
+  }, [inputUrl]);
 
   // On initial component mount, check for the 'url' parameter
   useEffect(() => {
@@ -47,7 +48,7 @@ function CalendarEmbedder() {
       setInputUrl(urlFromParam);
       validateAndSetUrl(urlFromParam);
     }
-  }, [searchParams]);
+  }, [searchParams, validateAndSetUrl]);
 
   // Handle manual submission from the input field
   const handleManualSubmit = () => {

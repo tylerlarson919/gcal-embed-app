@@ -1,103 +1,122 @@
-import Image from "next/image";
+'use client';
 
-export default function Home() {
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+
+function CalendarEmbedder() {
+  const searchParams = useSearchParams();
+  const [inputUrl, setInputUrl] = useState<string>('');
+  const [embeddedUrl, setEmbeddedUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const validateAndSetUrl = (urlToValidate: string | null) => {
+    setError(null);
+    setEmbeddedUrl(null);
+
+    if (!urlToValidate) {
+        // This case is for when the user clicks the button with an empty input
+        // We don't want to show an error if the page just loaded without a param
+        if (inputUrl === '') return; 
+        setError('URL cannot be empty.');
+        return;
+    }
+
+    try {
+      const url = new URL(urlToValidate);
+      const isValidGoogleCalendarUrl =
+        url.protocol === 'https:' &&
+        url.hostname === 'calendar.google.com' &&
+        url.pathname.includes('/embed') &&
+        url.searchParams.has('src');
+
+      if (!isValidGoogleCalendarUrl) {
+        throw new Error('URL must be a valid Google Calendar embed link with a "src" parameter.');
+      }
+      setEmbeddedUrl(urlToValidate);
+
+    } catch (e: any) {
+      setError(e.message || 'Invalid URL format. Please check and try again.');
+      setEmbeddedUrl(null);
+    }
+  };
+
+  // On initial component mount, check for the 'url' parameter
+  useEffect(() => {
+    const urlFromParam = searchParams.get('url');
+    if (urlFromParam) {
+      setInputUrl(urlFromParam);
+      validateAndSetUrl(urlFromParam);
+    }
+  }, [searchParams]);
+
+  // Handle manual submission from the input field
+  const handleManualSubmit = () => {
+    validateAndSetUrl(inputUrl);
+  };
+
+
+  // If a URL is successfully embedded, show only the full-screen iframe
+  if (embeddedUrl) {
+    return (
+      <div className="fixed inset-0 w-full h-full bg-black">
+        <iframe
+          src={embeddedUrl}
+          className="filter invert(1) hue-rotate(180deg)"
+          style={{ borderWidth: 0, backgroundColor: '#ffffff' }}
+          width="100%"
+          height="100%"
+          frameBorder="0"
+          scrolling="no"
+          title="Google Calendar Embed"
+        ></iframe>
+      </div>
+    );
+  }
+
+  // Otherwise, show the input form
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <main className="flex min-h-screen w-full flex-col items-center justify-center p-6">
+      <div className="w-full max-w-4xl">
+        <h1 className="text-3xl font-bold text-center text-white mb-4">
+          Google Calendar Embedder
+        </h1>
+        <p className="text-center text-gray-400 mb-8">
+          Paste your full Google Calendar embed URL to display it, or provide it as a URL parameter.
+        </p>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+        <div className="flex flex-col sm:flex-row gap-2 mb-4">
+          <input
+            type="text"
+            value={inputUrl}
+            onChange={(e) => setInputUrl(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleManualSubmit()}
+            placeholder="https://calendar.google.com/calendar/embed?src=..."
+            className="flex-grow bg-gray-800 text-white border border-gray-600 rounded-md px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+          />
+          <button
+            onClick={handleManualSubmit}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded-md transition-colors"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            Embed
+          </button>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+
+        {error && (
+          <div className="bg-red-900 border border-red-700 text-red-200 px-4 py-3 rounded-md mt-4 text-center">
+            <strong>Error:</strong> {error}
+          </div>
+        )}
+      </div>
+    </main>
   );
+}
+
+
+// Wrap the main component in Suspense as required by useSearchParams
+export default function HomePage() {
+    return (
+        <Suspense fallback={<div className="bg-gray-900 w-full h-screen"></div>}>
+            <CalendarEmbedder />
+        </Suspense>
+    );
 }
